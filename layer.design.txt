@@ -1,0 +1,70 @@
+Ogo Alege, April, 2024
+
+
++++Activation Functions Prototype+++
+    - Allows each layer to support whatever activation function it holds
+
+typedef float (*Activation) (float value)
+
+
++++Layer Structure+++
+
+typedef struct _layer{
+    uint input_size;
+    uint layer_size; /* number of neurons */
+    float **weights; /* Each neurons input weights are represented by the columns
+                        Below shows how the weights member will be represented
+                                Neuron idx
+                              0   1   2   3
+                            +---------------+
+             Input Weight 1 |   |   |   |   |
+                            +---------------+
+             Input Weight 2 |   |   |   |   |
+                            +---------------+
+             Input Weight 3 |   |   |   |   |
+                            +---------------+
+             Input Weight 4 |   |   |   |   |
+                            +---------------+
+             Input Weight 5 |   |   |   |   |
+                            +---------------+
+                            */
+
+    float *biases; /* layer_size */
+    float **output; /* layer_size */
+    Activation activ; /* Activation function */
+} Layer;
+
+
++++Forward pass+++
+
+        void forward_pass (float **a , int a_rows, int a_columns, Layer *l);
+
+            *****************************************************************
+            *  I can alse use size_of() to determine the matrix dimensions: *
+            *           e.g. a_rows = size_of(a) / size_of(a[0]);           *
+            *                a_columns = size_of(a[0]) / size_of(a[0][0]);  *
+            *****************************************************************
+
+        realloc space for the output matrix using a_rows for its rows
+        and l->weights columns (l->layer_size) for its columns
+
+
+        for rows in output:
+            for columns in output:
+                for i from 0 to a_columns - 1 or for i from 0 to b_rows - 1
+                    output[row][column] += a[row][i] * l->weights[i][column]
+                output[row][column] =  l->activ(output[row][column] + biases[column]);
+
+        ***********************************************************
+        * I can possibly free the input matrix 'a' to save memmory*
+        ***********************************************************
+
+
+
+
+
+
+
+
+
+
