@@ -7,9 +7,9 @@ Ogo Alege, April, 2024
 typedef float (*Activation) (float value)
 
 
-+++Layer Structure+++
++++Layer Structures+++
 
-typedef struct _layer{
+typedef struct _dense_layer{
     uint input_size;
     uint layer_size; /* number of neurons */
     float **weights; /* Each neurons input weights are represented by the columns
@@ -30,14 +30,31 @@ typedef struct _layer{
                             */
 
     float *biases; /* layer_size */
-    float **output; /* layer_size */
+    float **output; /* Below shows how the output member (Input for next layer) will be represented
+                                  Neuron idx
+                              0   1   2   3   4
+                            +-------------------+
+                            |   |   |   |   |   |
+                            +-------------------+
+                            |   |   |   |   |   |
+                            +-------------------+
+                    Batch   |   |   |   |   |   |
+                            +-------------------+
+                            |   |   |   |   |   |
+                            +-------------------+
+                            |   |   |   |   |   |
+                            +-------------------+
+
+    float **output_z; /* Output before activation function */
+
+
     Activation activ; /* Activation function */
-} Layer;
+} Layer_Dense;
 
 
 +++Forward pass+++
 
-        void forward_pass (float **a , int a_rows, int a_columns, Layer *l);
+        void forward_pass (Layer_Dense *l1, Layer_Dense *l2);
 
             *****************************************************************
             *  I can alse use size_of() to determine the matrix dimensions: *
@@ -46,24 +63,158 @@ typedef struct _layer{
             *****************************************************************
 
         realloc space for the output matrix using a_rows for its rows
-        and l->weights columns (l->layer_size) for its columns
+        and l2->weights columns (l2->layer_size) for its columns
 
 
-        for rows in output:
-            for columns in output:
-                for i from 0 to a_columns - 1 or for i from 0 to b_rows - 1
-                    output[row][column] += a[row][i] * l->weights[i][column]
-                output[row][column] =  l->activ(output[row][column] + biases[column]);
+        for rows in l2->output:
+            for columns in l2->output:
+                for i from 0 to l1->output columns - 1 or for i from 0 to l2->output rows - 1
+                    l2->output[row][column] += l1->output [row][i] * l2->weights[i][column]
+                    l2->output_z[row][column] += l1->output [row][i] * l2->weights[i][column]
+                if(l2->activ != null) // it is only null for the output layer
+                output[row][column] =  l2->activ(l2->output[row][column] + l2->biases[column]);
+        if(activ == null) softmax(output)
 
         ***********************************************************
         * I can possibly free the input matrix 'a' to save memmory*
         ***********************************************************
 
 
++++Activation Functions+++
+
+float ReLU(float x)
+    (x<0) ? return 0: return x;
+
+
+float ReLU_Derivative(float x)
+    return (float) x > 0
+
+softmax - used for output layer in classification networks
+    #Note: softmax will not be used inside the layer structs itself
+
+include math.h
+
+void Softmax(float **x)
+
+    for each row in output
+        float row_max
+        for each column in output or row
+            find row_max
+
+        float row_sum /* Exponentiated sum */
+        for each column in output or row
+            output[row][column] = expf(output[row][column] - row_max)
+            row_sum += output[row][column];
+        for each column in output or row
+            output[row][column] /= row_sum /* Normalise output */
+
+
+
++++Loss Function+++ Need to be updated and fixed
+######################################################################################################
+Categorical cross-Entropy (softmax loss)
+
+int Soft_loss(float **prediction, float **expected, float *loss_out) /* expected is one-hot encoded*/
+
+    float loss;
+
+    malloc space for the loss_out matrix, it should be the same dimensions as the
+    input matrixes
+
+    (float *) malloc(sizeof(float) * sizeof(prediction)/sizeof(prediction[0]) );
+
+    for each row in prediction
+        loss = 0
+        for each column in prediction or row
+            float l = logf(prediction[row][column] * expected[row][column])
+
+            /* To clip infinite values */
+            if l equals 0x7f800000 (+ve infinity float)
+                loss += powf(10, -7);
+            else if l equals 0xff800000 (-ve infinity float)
+                loss += 1 - powf(10, -7);
+            else
+                loss += l;
+
+        loss_out[row] = loss * -1
+        data_loss += loss_out[row]
+
+
+    return data_loss / rows
 
 
 
 
+int Soft_loss_idx(float **prediction, int *expected_idx, float *loss_out)
+
+    float loss;
+    float data_loss; // Average loss
+
+    loss_out = (float *) malloc(sizeof(float) * sizeof(prediction)/sizeof(prediction[0]) );
+
+    for each row in prediction
+        loss_out[row] = -logf(prediction[row][expected_idx[row]]);
+            /* To clip infinite values */
+            if loss_out[row] equals 0x7f800000 (+ve infinity float)
+                loss_out[row] = powf(10, -7);
+            else if loss_out[row] equals 0xff800000 (-ve infinity float)
+                loss_out[row] = 1 - powf(10, -7);
+
+
+        data_loss += loss_out[row]
+
+    return data_loss / rows // Actual dataloss
+######################################################################################################
+
+
++++Back Propagation+++
+
+    l1 <-- l2
+    void backward_pass_output(Layer_Dense *l1, Layer_Dense *l2, float **expected):
+        float **dZ2 with the size of l2 (layer 2) output
+
+        dZ2 = l2->output - expected:
+            for rows in l2->output or expected
+                for columns in l2->output or expected or row
+                    dZ2[row][column] = l2->output[row][column] - expected[row][column]
+
+        dW2 = 1/m * dZ2 . Transpose(l1->output):
+            for rows in dZ2
+                for columns in dZ2
+                    for i from 0 to columns - 1
+                        dW2[row][column] += dZ2[row][i] * l1->output[column][i] / m(number of rows in dZ2)
+
+
+        dB2 = 1/m * sum of rows for each column in dZ2
+            for colums in dZ2
+                for rows in dZ2
+                    dB2[columns] += dZ2[row][column]
+                dB2[columns] /= m(number of rows in dZ2)
+
+
+
+    /* Works on l2's weights and biases */
+    void backward_pass_hidden(Layer_Dense *l1, Layer_Dense *l2, Layer_Dense *l3):
+
+        dZ2 = Transpose(l3->weights) . dZ3  * ReLU_Derivative(l2->output_z)
+            for rows in dZ3
+                for columns in dZ3
+                    for i from 0 to columns - 1
+                        dZ2[row][column] += l3->weights[i][row] * dZ3[i][column]
+                dZ2[row][column] *= ReLU_Derivative(l2->output_z[row][column])
+
+        dW2 = 1/m * dZ2 . Transpose(l1->output):
+            for rows in dZ2
+                for columns in dZ2
+                    for i from 0 to columns - 1
+                        dW2[row][column] += dZ2[row][i] * l1->output[column][i] / m(number of rows in dZ2)
+
+
+        dB2 = 1/m * sum of rows for each column in dZ2
+            for colums in dZ2
+                for rows in dZ2
+                    dB2[columns] += dZ2[row][column]
+                dB2[columns] /= m(number of rows in dZ2)
 
 
 
