@@ -5,6 +5,13 @@
 #include "dense.Layer.h"
 
 
+static float ReLU(float x){
+    return (x<0) ? 0: x;
+}
+
+static float ReLU_Derivative(float x){
+    return (float) x > 0;
+}
 
 
 void printLayer(Layer_Dense *l){
@@ -140,13 +147,24 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
 
 
 int main (void){
-    Layer_Dense d;
+    Layer_Dense l1, l2;
 
-    if(initLayer(&d, 2, 8, 4, ReLU) < 0){
+    if(initLayer(&l1, 2, 7, 4, ReLU) < 0){
         perror("Failed to initialise layer");
     }
 
-    printLayer(&d);
+    if(initLayer(&l2, 7, 5, 4, ReLU) < 0){
+        perror("Failed to initialise layer");
+    }
+
+    printLayer(&l1);
+    printLayer(&l2);
+
+
+    forward_pass(&l1, &l2);
+
+
+    printLayer(&l2);
 
     return 0;
 }

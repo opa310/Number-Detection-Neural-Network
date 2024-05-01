@@ -1,6 +1,8 @@
 #ifndef DENSE_LAYER_H
 #define DENSE_LAYER_H
 
+
+
 typedef float (*Activation) (float value);
 
 typedef struct _dense_layer{
@@ -14,13 +16,19 @@ typedef struct _dense_layer{
 } Layer_Dense;
 
 
-float ReLU(float x){
-    return (x<0) ? 0: x;
-}
+/* Activation functions */
+static float ReLU(float x)__attribute__((unused));
+static float ReLU_Derivative(float x)__attribute__((unused));
+void Softmax(Layer_Dense *l);
 
-float ReLU_Derivative(float x){
-    return (float) x > 0;
-}
+
+
+
+void printLayer(Layer_Dense *l);
+int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_size, Activation function);
+
+
+void forward_pass (Layer_Dense *l1, Layer_Dense *l2);
 
 
 #endif /* DENSE_LAYER_H */

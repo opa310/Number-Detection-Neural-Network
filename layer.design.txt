@@ -10,8 +10,8 @@ typedef float (*Activation) (float value)
 +++Layer Structures+++
 
 typedef struct _dense_layer{
-    uint input_size;
-    uint layer_size; /* number of neurons */
+    int weights_dim[2]; //{Rows, Columns}
+    int outputs_dim[2]; //{Rows, Columns}
     float **weights; /* Each neurons input weights are represented by the columns
                         Below shows how the weights member will be represented
                                 Neuron idx
@@ -72,7 +72,7 @@ typedef struct _dense_layer{
                     l2->output[row][column] += l1->output [row][i] * l2->weights[i][column]
                     l2->output_z[row][column] += l1->output [row][i] * l2->weights[i][column]
                 if(l2->activ != null) // it is only null for the output layer
-                output[row][column] =  l2->activ(l2->output[row][column] + l2->biases[column]);
+                l2->output_a[row][column] =  l2->activ(l2->output_z[row][column] + l2->biases[column]);
         if(activ == null) softmax(output)
 
         ***********************************************************
