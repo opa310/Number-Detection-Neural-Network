@@ -1,15 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
 #include "dense.Layer.h"
 
 
-static float ReLU(float x){
+float ReLU(float x){
     return (x<0) ? 0: x;
 }
 
-static float ReLU_Derivative(float x){
+float ReLU_Derivative(float x){
     return (float) x > 0;
 }
 
@@ -97,6 +93,19 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
         }
         memset(l->output_z[row], 0, sizeof(float) * layer_size);
     }
+
+   /* change in z (dZ) */
+    if((l->dZ = (float **) malloc(sizeof(float *) * batch_size)) == NULL){
+        goto freeall; 
+    }
+
+    for(int row = 0; row < batch_size; row++){
+        if((l->dZ[row] = (float *) malloc(sizeof(float) * layer_size)) == NULL){
+            goto freeall; 
+        }
+        memset(l->dZ[row], 0, sizeof(float) * layer_size);
+    }
+
     
 
     /* Output a */
@@ -132,6 +141,13 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
         }
         free(l->output_z);
 
+        if(l->dZ)
+        for(int row = 0; row < l->outputs_dim[0]; row++){
+            free(l->dZ[row]);
+        }
+        free(l->dZ);
+
+
         if(l->output_a)
         for(int row = 0; row < l->outputs_dim[0]; row++){
             free(l->output_a[row]);
@@ -145,26 +161,52 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
 
 
 
-
+/*
 int main (void){
-    Layer_Dense l1, l2;
+    Layer_Dense Input, l1, l2, output;
 
-    if(initLayer(&l1, 2, 7, 4, ReLU) < 0){
+    if(initLayer(&Input, 0, 50, 4, ReLU) < 0){
         perror("Failed to initialise layer");
     }
 
-    if(initLayer(&l2, 7, 5, 4, ReLU) < 0){
+    if(initLayer(&l1, 50, 6, 4, ReLU) < 0){
         perror("Failed to initialise layer");
     }
 
+
+    if(initLayer(&l2, 6, 6, 4, ReLU) < 0){
+        perror("Failed to initialise layer");
+    }
+
+    if(initLayer(&output, 6, 3, 4, NULL) < 0){
+        perror("Failed to initialise layer");
+    }
+
+    //printLayer(&l1);
+    //printLayer(&l2);
+
+
+    forward_pass(&Input, &l1);
+    forward_pass(&l1, &l2);
+    forward_pass(&l2, &output);
+
+    int expected[4] = {1,2,2,0};
+
+
+    printLayer(&output);
+
+    float learning_rate = 0.000001; // 42%
+
+    backward_pass (&l2, &output, NULL, expected, learning_rate);
+    backward_pass (&l1, &l2, &output, NULL, learning_rate);
+    backward_pass (&Input, &l1, &l2, NULL, learning_rate);
+
+
+    printLayer(&Input);
     printLayer(&l1);
     printLayer(&l2);
-
-
-    forward_pass(&l1, &l2);
-
-
-    printLayer(&l2);
+    printLayer(&output);
 
     return 0;
 }
+*/

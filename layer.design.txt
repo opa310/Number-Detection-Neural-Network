@@ -145,20 +145,21 @@ int Soft_loss(float **prediction, float **expected, float *loss_out) /* expected
 
 
 
-int Soft_loss_idx(float **prediction, int *expected_idx, float *loss_out)
+int Soft_loss_idx(Layer_Dense *l1, float **expected_idx, float **loss_out)
 
     float loss;
     float data_loss; // Average loss
 
     loss_out = (float *) malloc(sizeof(float) * sizeof(prediction)/sizeof(prediction[0]) );
 
-    for each row in prediction
-        loss_out[row] = -logf(prediction[row][expected_idx[row]]);
+    for each row in prediction (0 to l->outputs_dim[0] - 1)
+        memset(loss_out[row], 0, sizeof(float) * l->outputs_dim[1]);
+        loss_out[row][expected_idx[row]] = -logf(prediction[row][expected_idx[row]]);
             /* To clip infinite values */
             if loss_out[row] equals 0x7f800000 (+ve infinity float)
-                loss_out[row] = powf(10, -7);
+                loss_out[row][expected_idx[row]] = powf(10, -7);
             else if loss_out[row] equals 0xff800000 (-ve infinity float)
-                loss_out[row] = 1 - powf(10, -7);
+                loss_out[row][expected_idx[row]] = 1 - powf(10, -7);
 
 
         data_loss += loss_out[row]
@@ -179,8 +180,8 @@ int Soft_loss_idx(float **prediction, int *expected_idx, float *loss_out)
                     dZ2[row][column] = l2->output[row][column] - expected[row][column]
 
         dW2 = 1/m * dZ2 . Transpose(l1->output):
-            for rows in dZ2
-                for columns in dZ2
+            for rows in Transose(l1->output) (columns in l1->output) or l2->weights
+                for columns in dZ2 or l2->weights
                     for i from 0 to columns - 1
                         dW2[row][column] += dZ2[row][i] * l1->output[column][i] / m(number of rows in dZ2)
 
@@ -201,7 +202,7 @@ int Soft_loss_idx(float **prediction, int *expected_idx, float *loss_out)
                 for columns in dZ3
                     for i from 0 to columns - 1
                         dZ2[row][column] += l3->weights[i][row] * dZ3[i][column]
-                dZ2[row][column] *= ReLU_Derivative(l2->output_z[row][column])
+                    dZ2[row][column] *= ReLU_Derivative(l2->output_z[row][column])
 
         dW2 = 1/m * dZ2 . Transpose(l1->output):
             for rows in dZ2
