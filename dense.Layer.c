@@ -25,6 +25,14 @@ void printLayer(Layer_Dense *l){
             printf("%0.7f, ", l->biases[col]);
         printf("\n");
     }
+    printf("\n\ndZ gradient :\n"); 
+    for(int row = 0; row < l->outputs_dim[0]; row++){
+        for(int col = 0; col < l->outputs_dim[1]; col++){
+            printf("%0.7f, ", l->dZ[row][col]);
+        }
+        printf("\n");
+    }
+
     printf("\n\noutput_z :\n"); 
     for(int row = 0; row < l->outputs_dim[0]; row++){
         for(int col = 0; col < l->outputs_dim[1]; col++){
@@ -42,7 +50,7 @@ void printLayer(Layer_Dense *l){
 
     printf("\nActiv : ");
     if(l->activ == NULL){
-        printf("Output Layer\n");
+        printf("SoftMax\n");
     } else if(l->activ == ReLU){
         printf("ReLU\n");
     }
@@ -77,10 +85,13 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
     if((l->biases = (float *) malloc(sizeof(float) * layer_size)) == NULL){
         goto freeall; 
     }
+    /* Zeroed Biases*/
+    memset(l->biases, 0, sizeof(float) * layer_size);
 
+    /* Random Biases 
     for(int col = 0; col < layer_size; col++){
-            l->biases[col] = (float)rand()/(float)(RAND_MAX) * ((rand()&0x1)? 1:-1);
-    }
+       l->biases[col] = (float)rand()/(float)(RAND_MAX) * ((rand()&0x1)? 1:-1);
+    }*/
 
     /* Output z */
     if((l->output_z = (float **) malloc(sizeof(float *) * batch_size)) == NULL){
@@ -161,52 +172,3 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
 
 
 
-/*
-int main (void){
-    Layer_Dense Input, l1, l2, output;
-
-    if(initLayer(&Input, 0, 50, 4, ReLU) < 0){
-        perror("Failed to initialise layer");
-    }
-
-    if(initLayer(&l1, 50, 6, 4, ReLU) < 0){
-        perror("Failed to initialise layer");
-    }
-
-
-    if(initLayer(&l2, 6, 6, 4, ReLU) < 0){
-        perror("Failed to initialise layer");
-    }
-
-    if(initLayer(&output, 6, 3, 4, NULL) < 0){
-        perror("Failed to initialise layer");
-    }
-
-    //printLayer(&l1);
-    //printLayer(&l2);
-
-
-    forward_pass(&Input, &l1);
-    forward_pass(&l1, &l2);
-    forward_pass(&l2, &output);
-
-    int expected[4] = {1,2,2,0};
-
-
-    printLayer(&output);
-
-    float learning_rate = 0.000001; // 42%
-
-    backward_pass (&l2, &output, NULL, expected, learning_rate);
-    backward_pass (&l1, &l2, &output, NULL, learning_rate);
-    backward_pass (&Input, &l1, &l2, NULL, learning_rate);
-
-
-    printLayer(&Input);
-    printLayer(&l1);
-    printLayer(&l2);
-    printLayer(&output);
-
-    return 0;
-}
-*/

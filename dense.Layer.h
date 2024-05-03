@@ -26,7 +26,8 @@ float ReLU(float x)__attribute__((unused));
 float ReLU_Derivative(float x)__attribute__((unused));
 void Softmax(Layer_Dense *l);
 
-
+float correct;
+float total;
 
 
 void printLayer(Layer_Dense *l);
