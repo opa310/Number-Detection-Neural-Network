@@ -1,9 +1,9 @@
 #include "dense.Layer.h"
 
 
-#define BATCH_SIZE 10  // Adjust batch size as needed
+#define BATCH_SIZE 10 // Adjust batch size as needed
 #define MAXCHAR 30000  // Define maximum characters for file reading
-#define LEARNING_RATE 0.01 // Learning rate for training
+#define LEARNING_RATE 0.0076 // Learning rate for training
 
 
 #include <SDL2/SDL.h>
@@ -13,7 +13,7 @@ void render_image(const unsigned char *pixels) {
 
     const int width = 28;
     const int height = 28;
-    const int pixel_size = 2; 
+    const int pixel_size = 10; 
 
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
@@ -130,7 +130,7 @@ int main(void)
     }
 
 
-    FILE *fp;
+    FILE *fp, *test_output;
 
     if ((fp = fopen("digit-recognizer/train.csv", "r")) == NULL)
     {
@@ -224,7 +224,6 @@ int main(void)
         printf("\n");
     }
 
-    printf("\nTraining completed.\n");
 
     fclose(fp);
 
@@ -235,11 +234,79 @@ int main(void)
     }
 
 
+    // Testing phase
+    printf("\nGenerating output on testing dataset ...\n");
+
+    if ((test_output = fopen("digit-recognizer/test_output.csv", "w")) == NULL)
+    {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(test_output, "ImageId,Label\n");
+
+    char row[MAXCHAR];
+    int line_idx = 0;
+    while (fgets(row, MAXCHAR, fp) != NULL)
+    {
+        if(line_idx != 0){
+        // Process the line data
+        unsigned char user_data[Input.outputs_dim[1]]; 
+
+        
+        char *token = strtok(row, ",");
+
+        for (int i = 0; i < Input.outputs_dim[1]; i++)
+        {
+            
+            if (token == NULL)
+            {
+                printf("Error parsing line\n");
+                break;
+            }
+
+            user_data[i] = atof(token);
+
+            token = strtok(NULL, ",");
+        }
+
+        // Populate input
+        for (int j = 0; j < Input.outputs_dim[1]; j++)
+        {
+            Input.output_a[0][j] = (float)user_data[j] / 255; 
+        }
+
+        forward_pass(&Input, &l1);
+        forward_pass(&l1, &output);
+
+        // Get the predicted digit (index of maximum output)
+        int predicted_digit = 0;
+        float max_value = output.output_a[0][0];
+        for (int i = 1; i < output.outputs_dim[1]; i++)
+        {
+            if (output.output_a[0][i] > max_value)
+            {
+                max_value = output.output_a[0][i];
+                predicted_digit = i;
+            }
+        }
+
+        fprintf(test_output, "%d,%d\n", line_idx, predicted_digit);
+                
+        }
+        line_idx++;
+
+    }
+
+    fclose(test_output);
+    printf("Testing complete\n");
+
+
+
     // Prediction phase
    while (1)
     {
         int line_index;
-        printf("\nEnter a line index (or 'q' to quit): ");
+        printf("\nEnter a line index between 1 and 28000 (or 'q' to quit): ");
 
         
         if (scanf("%d", &line_index) != 1)
