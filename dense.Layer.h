@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <errno.h>
 
 
 typedef float (*Activation) (float value);
@@ -32,9 +33,13 @@ float total;
 
 void printLayer(Layer_Dense *l);
 int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_size, Activation function);
+void layer_dense_to_csv(Layer_Dense* layer, char* filename);
+void readLayerFromCSV(Layer_Dense ***layers, char *filename);
 
 
 void forward_pass (Layer_Dense *l1, Layer_Dense *l2);
 void backward_pass (Layer_Dense *l1, Layer_Dense *l2, Layer_Dense *l3, int *expected, float alpha);
+
+//#define malloc(...) NULL //For testing the init functions
 
 #endif /* DENSE_LAYER_H */

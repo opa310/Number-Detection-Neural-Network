@@ -150,6 +150,7 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
         for(int row = 0; row < l->outputs_dim[0]; row++){
             free(l->output_z[row]);
         }
+
         free(l->output_z);
 
         if(l->dZ)
@@ -171,4 +172,174 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
 }
 
 
+void layer_dense_to_csv(Layer_Dense* layer, char* filename) {
+    FILE* fp = fopen(filename, "a");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return;
+    }
 
+    // Write the header row
+    fprintf(fp, "weights_dim,outputs_dim,weights,biases,output_z,dZ,output_a\n");
+
+    // Write the dimensions of the weights arrays
+    fprintf(fp, "%d,%d\n", layer->weights_dim[0], layer->weights_dim[1]);
+
+    // Write the dimensions of the outputs arrays
+    fprintf(fp, "%d,%d\n",layer->outputs_dim[0], layer->outputs_dim[1]);
+
+    // Write the weights
+    for (int i = 0; i < layer->weights_dim[0]; i++) {
+        for (int j = 0; j < layer->weights_dim[1]; j++) {
+            fprintf(fp, "%f,", layer->weights[i][j]);
+        }
+        fprintf(fp, "\n");
+    }
+
+    // Write the biases
+    for (int i = 0; i < layer->weights_dim[1]; i++) {
+        fprintf(fp, "%f,", layer->biases[i]);
+    }
+    fprintf(fp, "\n");
+
+
+    // Write the output_z
+    for (int i = 0; i < layer->outputs_dim[0]; i++) {
+        for (int j = 0; j < layer->outputs_dim[1]; j++) {
+            fprintf(fp, "%f,", layer->output_z[i][j]);
+        }
+        fprintf(fp, "\n");
+    }
+
+    // Write the dZ
+    for (int i = 0; i < layer->outputs_dim[0]; i++) {
+        for (int j = 0; j < layer->outputs_dim[1]; j++) {
+            fprintf(fp, "%f,", layer->dZ[i][j]);
+        }
+        fprintf(fp, "\n");
+    }
+
+    // Write the output_a
+    for (int i = 0; i < layer->outputs_dim[0]; i++) {
+        for (int j = 0; j < layer->outputs_dim[1]; j++) {
+            fprintf(fp, "%f,", layer->output_a[i][j]);
+        }
+        fprintf(fp, "\n");
+    }
+
+    if (layer->activ == ReLU) {
+        fprintf(fp, "ReLU\n"); 
+    } else {
+        fprintf(fp, "NULL\n");
+    }
+
+
+    fclose(fp);
+}
+
+
+void readLayerFromCSV(Layer_Dense ***layers, char *filename) {
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        perror("Error opening file");
+        return;
+    }
+
+    if((*layers = (Layer_Dense **) malloc(sizeof(Layer_Dense *))) == NULL) {
+        printf("Could not allocate Memmory for Layer\n");
+        exit(1);
+    }
+
+
+    int num_layers = 1;
+    char header[100];
+
+
+    while (fgets(header, sizeof(header), fp) != NULL) {
+
+        // Check if it's a new layer
+        if (strstr(header, "weights_dim") != NULL) {
+            if( (*layers = realloc(*layers, num_layers * sizeof(Layer_Dense *))) == NULL){
+                printf("Could not reallocate Memmory for Layer\n");
+                exit(1);
+            }
+
+
+            int prev_layer_size, layer_size, batch_size;
+
+            // Read weights_dim
+            fscanf(fp, "%d,%d\n", &prev_layer_size, &layer_size);
+
+            // Read outputs_dim
+            fscanf(fp, "%d,%d\n", &batch_size, &layer_size);
+
+            (*layers)[num_layers - 1] = (Layer_Dense *) malloc(sizeof(Layer_Dense));
+            // Initialize current_layer
+            if(initLayer((*layers)[num_layers - 1], prev_layer_size, layer_size, batch_size, NULL) < 0)
+            {
+                perror("Failed to initialise layer");
+                exit(EXIT_FAILURE);
+            }
+
+            Layer_Dense *current_layer = (*layers)[num_layers - 1];
+
+
+            // Read weights
+            for (int j = 0; j < current_layer->weights_dim[0]; j++) {
+                for (int k = 0; k < current_layer->weights_dim[1]; k++) {
+                    fscanf(fp, "%f,", &(current_layer->weights[j][k]));
+                }
+                fscanf(fp, "\n");
+            }
+
+
+            // Read biases
+            for (int j = 0; j < current_layer->weights_dim[1]; j++) {
+                fscanf(fp, "%f,", &(current_layer->biases[j]));
+            }
+            fscanf(fp, "\n");
+
+
+            // Read output_z
+            for (int j = 0; j < current_layer->outputs_dim[0]; j++) {
+                for (int k = 0; k < current_layer->outputs_dim[1]; k++) {
+                    fscanf(fp, "%f,", &(current_layer->output_z[j][k]));
+                }
+                fscanf(fp, "\n");
+            }
+
+
+            // Read dZ
+            for (int j = 0; j < current_layer->outputs_dim[0]; j++) {
+                for (int k = 0; k < current_layer->outputs_dim[1]; k++) {
+                    fscanf(fp, "%f,", &(current_layer->dZ[j][k]));
+                }
+                fscanf(fp, "\n");
+            }
+
+
+            // Read output_a
+            for (int j = 0; j < current_layer->outputs_dim[0]; j++) {
+                for (int k = 0; k < current_layer->outputs_dim[1]; k++) {
+                    fscanf(fp, "%f,", &(current_layer->output_a[j][k]));
+                }
+                fscanf(fp, "\n");
+            }
+
+            // Read activation function
+            char activation[10];
+            fscanf(fp, "%s\n", activation);
+            if (strcmp(activation, "ReLU") == 0) {
+                current_layer->activ = ReLU;
+            } else {
+                current_layer->activ = NULL;
+            }
+
+
+            // Reallocate memory for layers
+            num_layers++;
+        }
+    }
+
+    fclose(fp);
+}

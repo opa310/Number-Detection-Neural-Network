@@ -3,22 +3,22 @@
 
 #define BATCH_SIZE 10 // Adjust batch size as needed
 #define MAXCHAR 30000  // Define maximum characters for file reading
-#define LEARNING_RATE 0.0076 // Learning rate for training
+#define LEARNING_RATE 0.097 // Learning rate for training
 
 
 #include <SDL2/SDL.h>
 
-void render_image(const unsigned char *pixels) {
 
+
+void render_image(const unsigned char *pixels) {
 
     const int width = 28;
     const int height = 28;
-    const int pixel_size = 10; 
+    const int pixel_size = 10;
 
     SDL_Window *window = NULL;
     SDL_Renderer *renderer = NULL;
 
-    
     SDL_Init(SDL_INIT_VIDEO);
 
     // Create a window
@@ -48,15 +48,19 @@ void render_image(const unsigned char *pixels) {
     // Render to screen
     SDL_RenderPresent(renderer);
 
-    // Wait for user to close window
+    // Event handling loop
     SDL_Event event;
-    while (SDL_WaitEvent(&event) && event.type != SDL_QUIT) {
-        
+
+    while (SDL_WaitEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            break;
+        }
     }
 
     // Cleanup
-    SDL_DestroyRenderer(renderer);
+    
     SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);
     SDL_Quit();
 }
 
@@ -119,11 +123,10 @@ void printProgressBar(int progress, int total)
 
 int main(void)
 {
-    Layer_Dense Input, l1, output;
+    Layer_Dense Input, output;
 
     if (initLayer(&Input, 0, 784, BATCH_SIZE, ReLU) < 0 ||
-        initLayer(&l1, 784, 10, BATCH_SIZE, ReLU) < 0 ||
-        initLayer(&output, 10, 10, BATCH_SIZE, NULL) < 0)
+        initLayer(&output, 784, 10, BATCH_SIZE, NULL) < 0)
     {
         perror("Failed to initialise layer");
         exit(EXIT_FAILURE);
@@ -209,14 +212,13 @@ int main(void)
                 processed_lines++;
             }
 
-            forward_pass(&Input, &l1);
-            forward_pass(&l1, &output);
+            forward_pass(&Input, &output);
 
             calc_accuracy(&output, expected);
 
             // Backpropagation
-            backward_pass(&l1, &output, NULL, expected, LEARNING_RATE);
-            backward_pass(&Input, &l1, &output, NULL, LEARNING_RATE);
+            backward_pass(&Input, &output, NULL, expected, LEARNING_RATE);
+
 
             // Updates progress bar
             printProgressBar(processed_lines, total_lines);
@@ -226,6 +228,37 @@ int main(void)
 
 
     fclose(fp);
+
+
+
+
+
+
+  // Store model into csv 
+  int result = remove("Digit-Recogniser.csv");
+
+  if (result == 0) {
+    printf("File \"%s\" deleted successfully.\n", "Digit-Recogniser.csv");
+  } else {
+    // Protects for case when file does not exist
+    if (errno != ENOENT) {
+      perror("Error deleting file");
+    }
+  }
+
+    layer_dense_to_csv(&Input, "Digit-Recogniser.csv");
+    layer_dense_to_csv(&output, "Digit-Recogniser.csv");
+    
+    Layer_Dense** model;
+
+    readLayerFromCSV(&model, "Digit-Recogniser.csv");
+
+    //printf("Got here 1\n");
+    //printLayer(model[0]);
+    //printf("Got here 2\n");
+    //printLayer(model[1]);
+
+
 
     if ((fp = fopen("digit-recognizer/test.csv", "r")) == NULL)
     {
@@ -269,23 +302,24 @@ int main(void)
             token = strtok(NULL, ",");
         }
 
+
         // Populate input
         for (int j = 0; j < Input.outputs_dim[1]; j++)
         {
-            Input.output_a[0][j] = (float)user_data[j] / 255; 
+            model[0]->output_a[0][j] = (float)user_data[j] / 255; 
         }
 
-        forward_pass(&Input, &l1);
-        forward_pass(&l1, &output);
+        forward_pass(model[0], model[1]);
+
 
         // Get the predicted digit (index of maximum output)
         int predicted_digit = 0;
-        float max_value = output.output_a[0][0];
-        for (int i = 1; i < output.outputs_dim[1]; i++)
+        float max_value = model[1]->output_a[0][0];
+        for (int i = 1; i < model[1]->outputs_dim[1]; i++)
         {
-            if (output.output_a[0][i] > max_value)
+            if (model[1]->output_a[0][i] > max_value)
             {
-                max_value = output.output_a[0][i];
+                max_value = model[1]->output_a[0][i];
                 predicted_digit = i;
             }
         }
@@ -303,7 +337,7 @@ int main(void)
 
 
     // Prediction phase
-   while (1)
+    while (1)
     {
         int line_index;
         printf("\nEnter a line index between 1 and 28000 (or 'q' to quit): ");
@@ -368,20 +402,20 @@ int main(void)
         // Populate input
         for (int j = 0; j < Input.outputs_dim[1]; j++)
         {
-            Input.output_a[0][j] = (float)user_data[j] / 255; 
+            model[0]->output_a[0][j] = (float)user_data[j] / 255; 
         }
 
-        forward_pass(&Input, &l1);
-        forward_pass(&l1, &output);
+        forward_pass(model[0], model[1]);
+
 
         // Get the predicted digit (index of maximum output)
         int predicted_digit = 0;
-        float max_value = output.output_a[0][0];
-        for (int i = 1; i < output.outputs_dim[1]; i++)
+        float max_value = model[1]->output_a[0][0];
+        for (int i = 1; i < model[1]->outputs_dim[1]; i++)
         {
-            if (output.output_a[0][i] > max_value)
+            if (model[1]->output_a[0][i] > max_value)
             {
-                max_value = output.output_a[0][i];
+                max_value = model[1]->output_a[0][i];
                 predicted_digit = i;
             }
         }
