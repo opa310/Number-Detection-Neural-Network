@@ -41,9 +41,10 @@ This project implements a simple neural network for recognizing handwritten digi
     - **Windows:**
       Download and install the SDL2 development libraries from [libsdl.org](https://libsdl.org).
 
-3. Unzip the training and test data
+3. Unzip the training and test data:
+    unzip the `digit-recognizer.zip` file with its contents inside of a folder called `digit-recognizer` 
 
-4. Build the project using `make`:
+5. Build the project using `make`:
 
     ```sh
     make
@@ -62,7 +63,7 @@ To train the neural network on the MNIST dataset, run the executable and follow 
 1. Enter `train` to start training the model.
 2. The training data should be placed in `digit-recognizer/train.csv`.
 
-## Note : Before generating test output or running predictions, the model must have been trained and generated the 'Digit-Recogniser.csv' file
+## Note : Before generating test output or running predictions, the model must have been trained and generated the `Digit-Recogniser.csv` file
 
 ### Generating Test Output
 
@@ -99,6 +100,7 @@ To predict the digit for a specific test case:
 
 ## Notes
 
+- Before generating test output or running predictions, the model must have been trained and generated the `Digit-Recogniser.csv` file
 - Ensure that the `train.csv` and `test.csv` files are formatted correctly.
 - Adjust `BATCH_SIZE` and `LEARNING_RATE` as needed for optimal performance.
 - The project supports Windows, Linux, and macOS. Make sure the correct libraries are installed for your OS.
