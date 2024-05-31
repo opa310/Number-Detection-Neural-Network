@@ -42,9 +42,9 @@ This project implements a simple neural network for recognizing handwritten digi
       Download and install the SDL2 development libraries from [libsdl.org](https://libsdl.org).
 
 3. Unzip the training and test data:
-    unzip the `digit-recognizer.zip` file with its contents inside of a folder called `digit-recognizer` 
+    - unzip the `digit-recognizer.zip` file with its contents inside of a folder called `digit-recognizer` 
 
-5. Build the project using `make`:
+6. Build the project using `make`:
 
     ```sh
     make
