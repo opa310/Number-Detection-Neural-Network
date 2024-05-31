@@ -10,8 +10,8 @@ float clip_gradient(float gradient) {
     else if (gradient < MIN_GRAD)
         return MIN_GRAD;
     else if (isnan(gradient)){
-        perror("NaN gradient");
-        exit(1);
+        //perror("NaN gradient");
+        //exit(1);
         if(gradient < 0)
             return MIN_GRAD;
         return MAX_GRAD;

@@ -58,7 +58,7 @@ void render_image(const unsigned char *pixels) {
     }
 
     // Cleanup
-    
+
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
@@ -126,7 +126,7 @@ int main(void)
     Layer_Dense Input, output;
 
     if (initLayer(&Input, 0, 784, BATCH_SIZE, ReLU) < 0 ||
-        initLayer(&output, 784, 10, BATCH_SIZE, NULL) < 0)
+            initLayer(&output, 784, 10, BATCH_SIZE, NULL) < 0)
     {
         perror("Failed to initialise layer");
         exit(EXIT_FAILURE);
@@ -134,6 +134,33 @@ int main(void)
 
 
     FILE *fp, *test_output;
+    Layer_Dense** model;
+
+    while(1){
+
+        char task[7];
+        printf("\nEnter \"train\" to train the model, \"gen\" to generate the testing output, and \"test\" to do predictions (use q to quit): ");
+
+        if (scanf("%s", task) != 0)
+        {
+            if (strcmp(task,"train") == 0)
+            {
+                goto TRAIN;
+            } else if (strcmp(task,"gen") == 0)
+            {
+                goto GEN;
+            } else if (strcmp(task,"test") == 0){
+                goto TEST;
+            } else if (strcmp(task,"q") == 0){
+                exit(0);
+            } else {
+                printf("Invalid Input\n");
+            }
+        }
+    }
+
+TRAIN:
+
 
     if ((fp = fopen("digit-recognizer/train.csv", "r")) == NULL)
     {
@@ -234,29 +261,31 @@ int main(void)
 
 
 
-  // Store model into csv 
-  int result = remove("Digit-Recogniser.csv");
+    // Store model into csv 
+    int result = remove("Digit-Recogniser.csv");
 
-  if (result == 0) {
-    printf("File \"%s\" deleted successfully.\n", "Digit-Recogniser.csv");
-  } else {
-    // Protects for case when file does not exist
-    if (errno != ENOENT) {
-      perror("Error deleting file");
+    if (result == 0) {
+        printf("File \"%s\" deleted successfully.\n", "Digit-Recogniser.csv");
+    } else {
+        // Protects for case when file does not exist
+        if (errno != ENOENT) {
+            perror("Error deleting file");
+        }
     }
-  }
 
     layer_dense_to_csv(&Input, "Digit-Recogniser.csv");
     layer_dense_to_csv(&output, "Digit-Recogniser.csv");
-    
-    Layer_Dense** model;
+
+
+GEN:
+
 
     readLayerFromCSV(&model, "Digit-Recogniser.csv");
 
     //printf("Got here 1\n");
-    //printLayer(model[0]);
+    printLayer(model[0]);
     //printf("Got here 2\n");
-    //printLayer(model[1]);
+    printLayer(model[1]);
 
 
 
@@ -282,50 +311,50 @@ int main(void)
     while (fgets(row, MAXCHAR, fp) != NULL)
     {
         if(line_idx != 0){
-        // Process the line data
-        unsigned char user_data[Input.outputs_dim[1]]; 
+            // Process the line data
+            unsigned char user_data[Input.outputs_dim[1]]; 
 
-        
-        char *token = strtok(row, ",");
 
-        for (int i = 0; i < Input.outputs_dim[1]; i++)
-        {
-            
-            if (token == NULL)
+            char *token = strtok(row, ",");
+
+            for (int i = 0; i < Input.outputs_dim[1]; i++)
             {
-                printf("Error parsing line\n");
-                break;
+
+                if (token == NULL)
+                {
+                    printf("Error parsing line\n");
+                    break;
+                }
+
+                user_data[i] = atof(token);
+
+                token = strtok(NULL, ",");
             }
 
-            user_data[i] = atof(token);
 
-            token = strtok(NULL, ",");
-        }
-
-
-        // Populate input
-        for (int j = 0; j < Input.outputs_dim[1]; j++)
-        {
-            model[0]->output_a[0][j] = (float)user_data[j] / 255; 
-        }
-
-        forward_pass(model[0], model[1]);
-
-
-        // Get the predicted digit (index of maximum output)
-        int predicted_digit = 0;
-        float max_value = model[1]->output_a[0][0];
-        for (int i = 1; i < model[1]->outputs_dim[1]; i++)
-        {
-            if (model[1]->output_a[0][i] > max_value)
+            // Populate input
+            for (int j = 0; j < Input.outputs_dim[1]; j++)
             {
-                max_value = model[1]->output_a[0][i];
-                predicted_digit = i;
+                model[0]->output_a[0][j] = (float)user_data[j] / 255; 
             }
-        }
 
-        fprintf(test_output, "%d,%d\n", line_idx, predicted_digit);
-                
+            forward_pass(model[0], model[1]);
+
+
+            // Get the predicted digit (index of maximum output)
+            int predicted_digit = 0;
+            float max_value = model[1]->output_a[0][0];
+            for (int i = 1; i < model[1]->outputs_dim[1]; i++)
+            {
+                if (model[1]->output_a[0][i] > max_value)
+                {
+                    max_value = model[1]->output_a[0][i];
+                    predicted_digit = i;
+                }
+            }
+
+            fprintf(test_output, "%d,%d\n", line_idx, predicted_digit);
+
         }
         line_idx++;
 
@@ -334,7 +363,14 @@ int main(void)
     fclose(test_output);
     printf("Testing complete\n");
 
+TEST:
+    readLayerFromCSV(&model, "Digit-Recogniser.csv");
 
+    if ((fp = fopen("digit-recognizer/test.csv", "r")) == NULL)
+    {
+        perror("Failed to open file");
+        exit(EXIT_FAILURE);
+    }
 
     // Prediction phase
     while (1)
@@ -342,7 +378,7 @@ int main(void)
         int line_index;
         printf("\nEnter a line index between 1 and 28000 (or 'q' to quit): ");
 
-        
+
         if (scanf("%d", &line_index) != 1)
         {
             // Check for quit command
@@ -359,7 +395,7 @@ int main(void)
         }
 
 
-        
+
         rewind(fp); 
         for (int i = 0; i < line_index; i++)
         {
@@ -382,12 +418,12 @@ int main(void)
         // Process the line data
         unsigned char user_data[Input.outputs_dim[1]]; 
 
-        
+
         char *token = strtok(row, ",");
 
         for (int i = 0; i < Input.outputs_dim[1]; i++)
         {
-            
+
             if (token == NULL)
             {
                 printf("Error parsing line\n");
