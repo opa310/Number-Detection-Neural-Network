@@ -1,4 +1,5 @@
 #include "dense.Layer.h"
+#include "conv.Layer.h"
 
 
 #define BATCH_SIZE 10 // Adjust batch size as needed
@@ -123,6 +124,43 @@ void printProgressBar(int progress, int total)
 
 int main(void)
 {
+
+    Layer_Conv test0, test1;
+    Input_Layer_Conv input_conv;
+    Layer_Pool pool0, pool1;
+
+    
+
+    if (initLayer_conv_input(&input_conv, 3, 28, 28) ||
+        initLayer_conv(&test0, 28, 28, 4, 3, 3, 2, ReLU) < 0 ||
+        initLayer_pool(&pool0, test0.outputs_dim[0], test0.outputs_dim[1], test0.outputs_dim[2], 3, 3, 1, Max_Pooling) < 0||
+        initLayer_conv(&test1, pool0.outputs_dim[1], pool0.outputs_dim[2], 2, 2, 2, 1, ReLU) < 0 ||
+        initLayer_pool(&pool1, test1.outputs_dim[0], test1.outputs_dim[1], test1.outputs_dim[2], 2, 2, 2, Max_Pooling) < 0)
+    {
+        perror("Failed to initialise Conv layers");
+        exit(EXIT_FAILURE);
+    } 
+
+    printLayer_conv_input(&input_conv);
+    printLayer_conv(&test0);
+    printLayer_pool(&pool0);
+    printLayer_conv(&test1);
+    printLayer_pool(&pool1);
+
+    forward_pass_conv(input_conv.inputs_dim, input_conv.inputs, &test0);
+    forward_pass_pool(test0.outputs_dim, test0.output_a, &pool0);
+    forward_pass_conv(pool0.outputs_dim, pool0.output, &test1);
+    forward_pass_pool(test1.outputs_dim, test1.output_a, &pool1);
+
+
+    printLayer_conv_input(&input_conv);
+    printLayer_conv(&test0);
+    printLayer_pool(&pool0);
+    printLayer_conv(&test1);
+    printLayer_pool(&pool1);
+
+
+
     Layer_Dense Input, output;
 
     if (initLayer(&Input, 0, 784, BATCH_SIZE, ReLU) < 0 ||

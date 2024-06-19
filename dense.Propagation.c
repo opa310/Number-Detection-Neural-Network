@@ -1,5 +1,6 @@
 #include "dense.Layer.h"
 
+float correct, total;
 
 #define MAX_GRAD 1.0
 #define MIN_GRAD -1.0
@@ -45,7 +46,7 @@ void Softmax(Layer_Dense *l){
 
 void forward_pass (Layer_Dense *l1, Layer_Dense *l2){
     if(l1->outputs_dim[1] != l2->weights_dim[0]){
-        printf("Invalid layer dimensions\n");
+        printf("Mismatched layer dimensions\n");
         return;
     }
 

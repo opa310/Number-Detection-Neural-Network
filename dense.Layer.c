@@ -1,14 +1,6 @@
 #include "dense.Layer.h"
 
 
-float ReLU(float x){
-    return (x<0) ? 0: x;
-}
-
-float ReLU_Derivative(float x){
-    return (float) x > 0;
-}
-
 
 void printLayer(Layer_Dense *l){
     printf("\nweights_dims : (%d,%d) ", l->weights_dim[0], l->weights_dim[1]);

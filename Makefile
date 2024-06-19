@@ -1,43 +1,50 @@
-.PHONY: clean build 
+.PHONY: clean build
 
 CC = gcc
 CFLAGS = -g -Wall -Wextra -pedantic -I.
-LDFLAGS =
-LIBS = -lm -lSDL2
+LDFLAGS = -L. -Lbuild/lib/
+LIBS = -lm -lSDL2 -lNeuralNetwork
 
 BIN_DIR = build/bin/
 LIB_DIR = build/lib/
 OBJ_DIR = build/obj/
 
+# File with Main defined
+OBJ_EXCLUDE = DigitRecogniser.o
+
+# Source files
+SRC_FILES = $(wildcard *.c)
+OBJ_FILES = $(patsubst %.c, $(OBJ_DIR)%.o, $(SRC_FILES))
+OBJ_INCLUDE = $(filter-out $(OBJ_DIR)$(OBJ_EXCLUDE), $(OBJ_FILES))
 
 ifeq ($(OS), Windows_NT)
     CC = x86_64-w64-mingw32-gcc
-    LDFLAGS += -L. -L/usr/x86_64-w64-mingw32/lib
+    LDFLAGS += -L/usr/x86_64-w64-mingw32/lib
     LIBS += -lmingw32
 else ifeq ($(shell uname -s), Linux)
-CFLAGS += -I/usr/include
-    LDFLAGS += -L. -L/usr/lib/x86_64-linux-gnu
+    CFLAGS += -I/usr/include
+    LDFLAGS += -L/usr/lib/x86_64-linux-gnu
 else ifeq ($(shell uname -s), Darwin)
-CFLAGS += -I/opt/homebrew/include
-    LDFLAGS += -L. -L/opt/homebrew/lib
+    CFLAGS += -I/opt/homebrew/include
+    LDFLAGS += -L/opt/homebrew/lib
 endif
 
+# Rule to build the final binary
+$(BIN_DIR)NeuralNetwork: $(LIB_DIR)libNeuralNetwork.a $(OBJ_DIR)DigitRecogniser.o | build
+	$(CC) $(LDFLAGS) -o $@ $(OBJ_DIR)DigitRecogniser.o $(LIBS)
 
-$(BIN_DIR)NeuralNetwork: $(OBJ_DIR)dense.Layer.o $(OBJ_DIR)dense.Propagation.o $(OBJ_DIR)DigitRecogniser.o
-	$(CC) $(LDFLAGS) -o $(BIN_DIR)NeuralNetwork $(OBJ_DIR)DigitRecogniser.o $(OBJ_DIR)dense.Layer.o\
-		$(OBJ_DIR)dense.Propagation.o $(LIBS)
+# Rule to build the static library excluding the specified object file
+$(LIB_DIR)libNeuralNetwork.a: $(OBJ_INCLUDE) | build
+	ar rcs $@ $^
 
-$(OBJ_DIR)dense.Layer.o: dense.Layer.c build
-	$(CC) $(CFLAGS) -c dense.Layer.c -o $(OBJ_DIR)dense.Layer.o
+# Rule to compile source files into object files in the object directory
+$(OBJ_DIR)%.o: %.c | build
+	$(CC) $(CFLAGS) -c $< -o $@
 
-$(OBJ_DIR)dense.Propagation.o: dense.Propagation.c build
-	$(CC) $(CFLAGS) -c dense.Propagation.c -o $(OBJ_DIR)dense.Propagation.o  
-
-$(OBJ_DIR)DigitRecogniser.o: DigitRecogniser.c build
-	$(CC) $(CFLAGS) -c DigitRecogniser.c -o $(OBJ_DIR)DigitRecogniser.o 
-
+# Clean up build artifacts
 clean:
 	rm -rf build Digit-Recogniser.csv
 
+# Create necessary directories
 build:
-	mkdir -p build/{bin,lib,obj}
+	mkdir -p $(BIN_DIR) $(LIB_DIR) $(OBJ_DIR)
