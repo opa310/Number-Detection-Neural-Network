@@ -98,12 +98,12 @@ void backward_pass (Layer_Dense *l1, Layer_Dense *l2, Layer_Dense *l3, int *expe
     for (int row = 0; row < l2->outputs_dim[0]; row++) {
         for (int col = 0; col < l2->outputs_dim[1]; col++) {
             l2->dZ[row][col] = 0;
-            if (l2->activ == ReLU) {
+            if (l2->activ != NULL) {
                 for (int i = 0; i < l2->outputs_dim[1]; i++) {
                     l2->dZ[row][col] += l3->weights[col][i] * l3->dZ[row][i];
                 }
 
-                l2->dZ[row][col] *= ReLU_Derivative(l2->output_z[row][col]);
+                l2->dZ[row][col] *= l2->activ_deriv(l2->output_z[row][col]);
             } else {
                 l2->dZ[row][col] = l2->output_a[row][col] - ((col == expected[row]) ? 1 : 0); 
             }

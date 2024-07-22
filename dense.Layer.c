@@ -3,6 +3,8 @@
 
 
 void printLayer(Layer_Dense *l){
+    printf("\nDense Layer");
+
     printf("\nweights_dims : (%d,%d) ", l->weights_dim[0], l->weights_dim[1]);
     printf("\noutputs_dims : (%d,%d) ", l->outputs_dim[0], l->outputs_dim[1]);
     printf("\n\nweights :\n"); 
@@ -45,7 +47,9 @@ void printLayer(Layer_Dense *l){
         printf("SoftMax\n");
     } else if(l->activ == ReLU){
         printf("ReLU\n");
-    }
+    }  else if (l->activ == Leaky_ReLU){
+        printf("Leaky ReLU\n");
+    } 
 
 }
 
@@ -125,6 +129,14 @@ int initLayer(Layer_Dense *l, int prev_layer_size, int layer_size, int batch_siz
 
     /* Activation function */
     l->activ = function;
+
+    if(function == ReLU){
+            l->activ_deriv = ReLU_Derivative;
+    }else if(function == Leaky_ReLU){
+            l->activ_deriv = Leaky_ReLU_Derivative;
+    } else {
+            l->activ_deriv = NULL;
+    }
 
     return 0;
 
@@ -221,6 +233,8 @@ void layer_dense_to_csv(Layer_Dense* layer, char* filename) {
 
     if (layer->activ == ReLU) {
         fprintf(fp, "ReLU\n"); 
+    } else if (layer->activ == Leaky_ReLU){
+        fprintf(fp, "LeakyReLU\n");
     } else {
         fprintf(fp, "NULL\n");
     }
@@ -323,6 +337,8 @@ void readLayerFromCSV(Layer_Dense ***layers, char *filename) {
             fscanf(fp, "%s\n", activation);
             if (strcmp(activation, "ReLU") == 0) {
                 current_layer->activ = ReLU;
+            }else if(strcmp(activation, "LeakyReLU") == 0){
+                current_layer->activ = Leaky_ReLU;
             } else {
                 current_layer->activ = NULL;
             }

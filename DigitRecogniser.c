@@ -4,7 +4,7 @@
 
 #define BATCH_SIZE 10 // Adjust batch size as needed
 #define MAXCHAR 30000  // Define maximum characters for file reading
-#define LEARNING_RATE 0.097 // Learning rate for training
+#define LEARNING_RATE 0.0097 // Learning rate for training
 
 
 #include <SDL2/SDL.h>
@@ -125,48 +125,19 @@ void printProgressBar(int progress, int total)
 int main(void)
 {
 
-    Layer_Conv test0, test1;
     Input_Layer_Conv input_conv;
-    Layer_Pool pool0, pool1;
+    Layer_Conv conv0;
+    Layer_Pool pool0;
+    Layer_Dense dummy, Input, output;
 
-    
-
-    if (initLayer_conv_input(&input_conv, 3, 28, 28) ||
-        initLayer_conv(&test0, 28, 28, 4, 3, 3, 2, ReLU) < 0 ||
-        initLayer_pool(&pool0, test0.outputs_dim[0], test0.outputs_dim[1], test0.outputs_dim[2], 3, 3, 1, Max_Pooling) < 0||
-        initLayer_conv(&test1, pool0.outputs_dim[1], pool0.outputs_dim[2], 2, 2, 2, 1, ReLU) < 0 ||
-        initLayer_pool(&pool1, test1.outputs_dim[0], test1.outputs_dim[1], test1.outputs_dim[2], 2, 2, 2, Max_Pooling) < 0)
+    if (initLayer_conv_input(&input_conv, BATCH_SIZE, 1, 28, 28) < 0||
+        initLayer_conv(&conv0, 28, 28, 2, 3, 3, 1, Leaky_ReLU) < 0 ||
+        initLayer_pool(&pool0, conv0.outputs_dim[0], conv0.outputs_dim[1], conv0.outputs_dim[2], 2, 2, 2, Avg_Pooling) < 0||
+        initLayer(&dummy, 0, 0, 1, ReLU) < 0 ||
+        initLayer(&Input, 0, pool0.outputs_dim[0] * pool0.outputs_dim[1] * pool0.outputs_dim[2], BATCH_SIZE, ReLU) < 0 ||
+        initLayer(&output, pool0.outputs_dim[0] * pool0.outputs_dim[1] * pool0.outputs_dim[2], 10, BATCH_SIZE, NULL) < 0)
     {
-        perror("Failed to initialise Conv layers");
-        exit(EXIT_FAILURE);
-    } 
-
-    printLayer_conv_input(&input_conv);
-    printLayer_conv(&test0);
-    printLayer_pool(&pool0);
-    printLayer_conv(&test1);
-    printLayer_pool(&pool1);
-
-    forward_pass_conv(input_conv.inputs_dim, input_conv.inputs, &test0);
-    forward_pass_pool(test0.outputs_dim, test0.output_a, &pool0);
-    forward_pass_conv(pool0.outputs_dim, pool0.output, &test1);
-    forward_pass_pool(test1.outputs_dim, test1.output_a, &pool1);
-
-
-    printLayer_conv_input(&input_conv);
-    printLayer_conv(&test0);
-    printLayer_pool(&pool0);
-    printLayer_conv(&test1);
-    printLayer_pool(&pool1);
-
-
-
-    Layer_Dense Input, output;
-
-    if (initLayer(&Input, 0, 784, BATCH_SIZE, ReLU) < 0 ||
-            initLayer(&output, 784, 10, BATCH_SIZE, NULL) < 0)
-    {
-        perror("Failed to initialise layer");
+        perror("Failed to initialise layers");
         exit(EXIT_FAILURE);
     }
 
@@ -219,7 +190,7 @@ TRAIN:
 
     // Train the model
     printf("Training the model...\n");
-    int epochs = 30; // Number of epochs for training 
+    int epochs = 60; // Number of epochs for training 
     for (int epoch = 1; epoch <= epochs; epoch++)
     {
         correct = 0;
@@ -243,7 +214,7 @@ TRAIN:
                     break;
 
                 // Process the line data
-                float user_data[Input.outputs_dim[1]]; 
+                unsigned char user_data[784]; 
 
                 // Extract expected value and input data using strtok
                 char *token = strtok(row, ",");
@@ -256,7 +227,7 @@ TRAIN:
                 // Convert first token to integer
                 // This is the expected output idx
                 expected[batch_count] = atoi(token); 
-                for (int i = 0; i < Input.outputs_dim[1]; i++)
+                for (int i = 0; i < 784; i++)
                 {
                     token = strtok(NULL, ",");
                     if (token == NULL)
@@ -264,14 +235,28 @@ TRAIN:
                         printf("Error parsing line\n");
                         break;
                     }
-                    user_data[i] = atof(token); 
+                    user_data[i] = atof(token);
                 }
 
+                //render_image(user_data);
+
                 // Populate input 
-                for (int j = 0; j < Input.outputs_dim[1]; j++)
+                for (int j = 0; j < 784; j++)
                 {
-                    Input.output_a[batch_count][j] = user_data[j] / 255; 
+                    input_conv.inputs[batch_count][0][j/28][j%28] = (float) user_data[j] / 255; 
                 }
+
+
+                //printLayer_conv_input(&input_conv);
+
+                forward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[batch_count], &conv0);
+                //printLayer_conv(&conv0);
+
+                forward_pass_pool(conv0.outputs_dim, conv0.output_a, &pool0);
+                //printLayer_pool(&pool0);
+
+                flatten_pool_to_dense(&pool0, &Input, batch_count);
+                //printLayer(&Input);
 
                 batch_count++;
                 processed_lines++;
@@ -280,9 +265,24 @@ TRAIN:
             forward_pass(&Input, &output);
 
             calc_accuracy(&output, expected);
+            //printOutputAndExpected(&output, expected);
+            //printLayer(&output);
 
             // Backpropagation
             backward_pass(&Input, &output, NULL, expected, LEARNING_RATE);
+            backward_pass(&dummy, &Input, &output, NULL, LEARNING_RATE);
+
+            //printLayer(&output);
+
+            for(int dense_batch = 0; dense_batch < BATCH_SIZE; dense_batch++){
+                unflatten_dense_to_pool(&Input, &pool0, dense_batch);
+                //printLayer(&Input);
+                //printLayer_pool(&pool0);
+                backward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[dense_batch], NULL, &conv0, &pool0, LEARNING_RATE / BATCH_SIZE);
+            }
+
+            //printLayer_conv(&conv0);
+            
 
 
             // Updates progress bar

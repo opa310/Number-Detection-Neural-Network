@@ -19,6 +19,7 @@ typedef struct _dense_layer{
     float **dZ;
     float **output_a; //output after applying activation
     Activation activ;
+    Activation activ_deriv;
 } Layer_Dense;
 
 

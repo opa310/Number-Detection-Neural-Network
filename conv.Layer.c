@@ -1,6 +1,8 @@
 #include "conv.Layer.h"
 
 void printLayer_conv(Layer_Conv *l){
+    printf("\nConvolutional Layer");
+
     printf("\nkernels_dims : (%d,%d,%d) (kernel_count, rows, columns)",
      l->kernels_dim[0], l->kernels_dim[1], l->kernels_dim[2]);
 
@@ -60,33 +62,40 @@ void printLayer_conv(Layer_Conv *l){
         printf("SoftMax\n");
     } else if(l->activ == ReLU){
         printf("ReLU\n");
-    }
+    }  else if (l->activ == Leaky_ReLU){
+        printf("Leaky ReLU\n");
+    } 
 
 }
 
 
-void printLayer_conv_input(Input_Layer_Conv *l){
+void printLayer_conv_input(Input_Layer_Conv *l) {
+    printf("\nInput Layer");
 
-    printf("\ninputs_dim : (%d,%d,%d) (channels, rows, columns)",
-     l->inputs_dim[0], l->inputs_dim[1], l->inputs_dim[2]);
+    // Print input dimensions
+    printf("\ninputs_dim : (%d, %d, %d, %d) (batches, channels, rows, columns)",
+           l->inputs_dim[0], l->inputs_dim[1], l->inputs_dim[2], l->inputs_dim[3]);
 
-
-
-    printf("\n\ninput :\n"); 
-    for(int channel = 0; channel < l->inputs_dim[0]; channel++){
-        for(int row = 0; row < l->inputs_dim[1]; row++){
-            for(int col = 0; col < l->inputs_dim[2]; col++){
-                printf("%0.7f, ", l->inputs[channel][row][col]);
+    // Print input values
+    printf("\n\ninput :\n");
+    for (int batch = 0; batch < l->inputs_dim[0]; batch++) {
+        for (int channel = 0; channel < l->inputs_dim[1]; channel++) {
+            for (int row = 0; row < l->inputs_dim[2]; row++) {
+                for (int col = 0; col < l->inputs_dim[3]; col++) {
+                    printf("%0.7f, ", l->inputs[batch][channel][row][col]);
+                }
+                printf("\n");
             }
             printf("\n");
         }
-        printf("\n\n");
+        printf("\n");
     }
-
 }
 
 
+
 void printLayer_pool(Layer_Pool *l){
+    printf("\nPooling Layer");
 
     printf("\nkernels_dims : (%d,%d,%d) (kernel_count, rows, columns)",
      l->kernels_dim[0], l->kernels_dim[1], l->kernels_dim[2]);
@@ -94,7 +103,18 @@ void printLayer_pool(Layer_Pool *l){
 
     printf("\nStride : %d",l->stride);
 
-    
+
+    printf("\n\ndZ :\n"); 
+    for(int channel = 0; channel < l->outputs_dim[0]; channel++){
+        for(int row = 0; row < l->outputs_dim[1]; row++){
+            for(int col = 0; col < l->outputs_dim[2]; col++){
+                printf("%0.7f, ", l->dZ[channel][row][col]);
+            }
+            printf("\n");
+        }
+        printf("\n\n");
+    }
+
 
     printf("\n\noutput :\n"); 
     for(int channel = 0; channel < l->outputs_dim[0]; channel++){
@@ -152,7 +172,7 @@ int initLayer_conv(Layer_Conv *l, int prev_layer_row, int prev_layer_col,
             }
             for(int col = 0; col < l->kernels_dim[2]; col++){
                 /* Generates a random number between -1 and 1 */
-                l->kernels[kernel_num][row][col] = (float)rand()/(float)(RAND_MAX) * ((rand()&0x1)? 1:-1);
+                l->kernels[kernel_num][row][col] = (float)rand()/(float)(RAND_MAX) ;//* ((rand()&0x1)? 1:-1);
             }
         }
     }
@@ -228,6 +248,15 @@ int initLayer_conv(Layer_Conv *l, int prev_layer_row, int prev_layer_col,
     /* Activation function */
     l->activ = function;
 
+
+    if(function == ReLU){
+            l->activ_deriv = ReLU_Derivative;
+    }else if(function == Leaky_ReLU){
+            l->activ_deriv = Leaky_ReLU_Derivative;
+    } else {
+            l->activ_deriv = NULL;
+    }
+
     return 0;
 
 
@@ -278,46 +307,62 @@ int initLayer_conv(Layer_Conv *l, int prev_layer_row, int prev_layer_col,
 }
 
 
-int initLayer_conv_input(Input_Layer_Conv *l, int channels, int row, int col){
+int initLayer_conv_input(Input_Layer_Conv *l, int batches, int channels, int rows, int cols) {
+    l->inputs_dim[0] = batches;
+    l->inputs_dim[1] = channels;
+    l->inputs_dim[2] = rows;
+    l->inputs_dim[3] = cols;
 
-    l->inputs_dim[0] = channels;
-    l->inputs_dim[1] = row;
-    l->inputs_dim[2] = col;
-
-    if((l->inputs = (float ***) malloc(sizeof(float **) * l->inputs_dim[0])) == NULL){
-        goto freeall;      
+    l->inputs = (float ****)malloc(sizeof(float ***) * batches);
+    if (l->inputs == NULL) {
+        goto freeall;
     }
-    for(int channel = 0; channel < l->inputs_dim[0]; channel++){
-        if((l->inputs[channel] = (float **) malloc(sizeof(float *) * l->inputs_dim[1])) == NULL){
-            goto freeall; 
-        }
-        for(int row = 0; row < l->inputs_dim[1]; row++){
-            if((l->inputs[channel][row] = (float *) malloc(sizeof(float) * l->inputs_dim[2])) == NULL){
-            goto freeall; 
-            }
-            memset(l->inputs[channel][row], 0, sizeof(float) * l->inputs_dim[2]);
 
-            for(int col = 0; col < l->inputs_dim[1]; col++){
-                l->inputs[channel][row][col] = (float)rand()/(float)(RAND_MAX) * ((rand()&0x1)? 1:-1);
+    for (int batch = 0; batch < batches; batch++) {
+        l->inputs[batch] = (float ***)malloc(sizeof(float **) * channels);
+        if (l->inputs[batch] == NULL) {
+            goto freeall;
+        }
+
+        for (int channel = 0; channel < channels; channel++) {
+            l->inputs[batch][channel] = (float **)malloc(sizeof(float *) * rows);
+            if (l->inputs[batch][channel] == NULL) {
+                goto freeall;
+            }
+
+            for (int row = 0; row < rows; row++) {
+                l->inputs[batch][channel][row] = (float *)malloc(sizeof(float) * cols);
+                if (l->inputs[batch][channel][row] == NULL) {
+                    goto freeall;
+                }
+                memset(l->inputs[batch][channel][row], 0, sizeof(float) * cols);
             }
         }
     }
 
     return 0;
 
-    freeall:
-        if(l->inputs)
-        for(int kernel_num = 0; kernel_num < l->inputs_dim[0]; kernel_num++){
-            for(int row = 0; row < l->inputs_dim[1]; row++){
-                free(l->inputs[kernel_num][row]);
+freeall:
+    if (l->inputs) {
+        for (int batch = 0; batch < batches; batch++) {
+            if (l->inputs[batch]) {
+                for (int channel = 0; channel < channels; channel++) {
+                    if (l->inputs[batch][channel]) {
+                        for (int row = 0; row < rows; row++) {
+                            free(l->inputs[batch][channel][row]);
+                        }
+                        free(l->inputs[batch][channel]);
+                    }
+                }
+                free(l->inputs[batch]);
             }
-            free(l->inputs[kernel_num]);
         }
         free(l->inputs);
+    }
 
-        return -1;
-
+    return -1;
 }
+
 
 
 int initLayer_pool(Layer_Pool *l, int prev_layer_channels, int prev_layer_row, int prev_layer_col,
@@ -334,25 +379,44 @@ int initLayer_pool(Layer_Pool *l, int prev_layer_channels, int prev_layer_row, i
     l->outputs_dim[2] = ((prev_layer_col - kernel_col)/stride) +1;
     
 
-    /* Output a */
-    if((l->output = (float ***) malloc(sizeof(float **) * l->outputs_dim[0])) == NULL){
+    /* Output and dZ*/
+    if((l->output = (float ***) malloc(sizeof(float **) * l->outputs_dim[0])) == NULL ||
+        (l->dZ = (float ***) malloc(sizeof(float **) * l->outputs_dim[0])) == NULL)
+    {
         goto freeall;      
     }
     for(int channel = 0; channel < l->outputs_dim[0]; channel++){
-        if((l->output[channel] = (float **) malloc(sizeof(float *) * l->outputs_dim[1])) == NULL){
+        if((l->output[channel] = (float **) malloc(sizeof(float *) * l->outputs_dim[1])) == NULL ||
+            (l->dZ[channel] = (float **) malloc(sizeof(float *) * l->outputs_dim[1])) == NULL)
+        {
             goto freeall; 
         }
         for(int row = 0; row < l->outputs_dim[1]; row++){
-            if((l->output[channel][row] = (float *) malloc(sizeof(float) * l->outputs_dim[2])) == NULL){
-            goto freeall; 
+            if((l->output[channel][row] = (float *) malloc(sizeof(float) * l->outputs_dim[2])) == NULL ||
+                (l->dZ[channel][row] = (float *) malloc(sizeof(float) * l->outputs_dim[2])) == NULL)
+            {
+                goto freeall; 
             }
             memset(l->output[channel][row], 0, sizeof(float) * l->outputs_dim[2]);
+            memset(l->dZ[channel][row], 0, sizeof(float) * l->outputs_dim[2]);
         }
     }
 
 
     /* Activation function */
     l->pool = function;
+
+    if(function == Max_Pooling){
+            l->pool_deriv = Max_Pooling_Derivative;
+    } else if(function == Min_Pooling){
+            l->pool_deriv = Min_Pooling_Derivative;
+    } else if(function == Avg_Pooling){
+            l->pool_deriv = Avg_Pooling_Derivative;
+    } else {
+        /* Max Pooling by default*/
+        l->pool = Max_Pooling;
+        l->pool_deriv = Max_Pooling_Derivative;
+    }
 
     return 0;
 
@@ -367,9 +431,16 @@ int initLayer_pool(Layer_Pool *l, int prev_layer_channels, int prev_layer_row, i
         }
         free(l->output);
 
+        if(l->dZ)
+        for(int channel = 0; channel < l->outputs_dim[0]; channel++){
+            for(int row = 0; row < l->outputs_dim[1]; row++){
+                free(l->dZ[channel][row]);
+            }
+            free(l->dZ[channel]);
+        }
+        free(l->dZ);
+
         return -1;
-
-
 }
 
 /*

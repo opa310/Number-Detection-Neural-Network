@@ -41,10 +41,10 @@ $(LIB_DIR)libNeuralNetwork.a: $(OBJ_INCLUDE) | build
 $(OBJ_DIR)%.o: %.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean up build artifacts
+
 clean:
 	rm -rf build Digit-Recogniser.csv
 
-# Create necessary directories
+
 build:
 	mkdir -p $(BIN_DIR) $(LIB_DIR) $(OBJ_DIR)
