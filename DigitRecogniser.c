@@ -278,7 +278,7 @@ TRAIN:
                 unflatten_dense_to_pool(&Input, &pool0, dense_batch);
                 //printLayer(&Input);
                 //printLayer_pool(&pool0);
-                backward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[dense_batch], NULL, &conv0, &pool0, 0.0000009/*LEARNING_RATE / BATCH_SIZE*/);
+                backward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[dense_batch], NULL, &conv0, &pool0, 0.00001/*LEARNING_RATE / BATCH_SIZE*/);
             }
 
             //printLayer_conv(&conv0);
