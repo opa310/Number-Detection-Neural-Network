@@ -1,10 +1,9 @@
 #include "dense.Layer.h"
-#include "conv.Layer.h"
 
 
 #define BATCH_SIZE 10 // Adjust batch size as needed
 #define MAXCHAR 30000  // Define maximum characters for file reading
-#define LEARNING_RATE 0.0097 // Learning rate for training
+#define LEARNING_RATE 0.097 // Learning rate for training
 
 
 #include <SDL2/SDL.h>
@@ -124,20 +123,12 @@ void printProgressBar(int progress, int total)
 
 int main(void)
 {
+    Layer_Dense Input, output;
 
-    Input_Layer_Conv input_conv;
-    Layer_Conv conv0;
-    Layer_Pool pool0;
-    Layer_Dense dummy, Input, output;
-
-    if (initLayer_conv_input(&input_conv, BATCH_SIZE, 1, 28, 28) < 0||
-        initLayer_conv(&conv0, 28, 28, 2, 3, 3, 1, Leaky_ReLU) < 0 ||
-        initLayer_pool(&pool0, conv0.outputs_dim[0], conv0.outputs_dim[1], conv0.outputs_dim[2], 2, 2, 2, Avg_Pooling) < 0||
-        initLayer(&dummy, 0, 0, 1, ReLU) < 0 ||
-        initLayer(&Input, 0, pool0.outputs_dim[0] * pool0.outputs_dim[1] * pool0.outputs_dim[2], BATCH_SIZE, ReLU) < 0 ||
-        initLayer(&output, pool0.outputs_dim[0] * pool0.outputs_dim[1] * pool0.outputs_dim[2], 10, BATCH_SIZE, NULL) < 0)
+    if (initLayer(&Input, 0, 784, BATCH_SIZE, ReLU) < 0 ||
+            initLayer(&output, 784, 10, BATCH_SIZE, NULL) < 0)
     {
-        perror("Failed to initialise layers");
+        perror("Failed to initialise layer");
         exit(EXIT_FAILURE);
     }
 
@@ -190,7 +181,7 @@ TRAIN:
 
     // Train the model
     printf("Training the model...\n");
-    int epochs = 60; // Number of epochs for training 
+    int epochs = 30; // Number of epochs for training 
     for (int epoch = 1; epoch <= epochs; epoch++)
     {
         correct = 0;
@@ -214,7 +205,7 @@ TRAIN:
                     break;
 
                 // Process the line data
-                unsigned char user_data[784]; 
+                float user_data[Input.outputs_dim[1]]; 
 
                 // Extract expected value and input data using strtok
                 char *token = strtok(row, ",");
@@ -227,7 +218,7 @@ TRAIN:
                 // Convert first token to integer
                 // This is the expected output idx
                 expected[batch_count] = atoi(token); 
-                for (int i = 0; i < 784; i++)
+                for (int i = 0; i < Input.outputs_dim[1]; i++)
                 {
                     token = strtok(NULL, ",");
                     if (token == NULL)
@@ -235,28 +226,14 @@ TRAIN:
                         printf("Error parsing line\n");
                         break;
                     }
-                    user_data[i] = atof(token);
+                    user_data[i] = atof(token); 
                 }
-
-                //render_image(user_data);
 
                 // Populate input 
-                for (int j = 0; j < 784; j++)
+                for (int j = 0; j < Input.outputs_dim[1]; j++)
                 {
-                    input_conv.inputs[batch_count][0][j/28][j%28] = (float) user_data[j] / 255; 
+                    Input.output_a[batch_count][j] = user_data[j] / 255; 
                 }
-
-
-                //printLayer_conv_input(&input_conv);
-
-                forward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[batch_count], &conv0);
-                //printLayer_conv(&conv0);
-
-                forward_pass_pool(conv0.outputs_dim, conv0.output_a, &pool0);
-                //printLayer_pool(&pool0);
-
-                flatten_pool_to_dense(&pool0, &Input, batch_count);
-                //printLayer(&Input);
 
                 batch_count++;
                 processed_lines++;
@@ -265,24 +242,9 @@ TRAIN:
             forward_pass(&Input, &output);
 
             calc_accuracy(&output, expected);
-            //printOutputAndExpected(&output, expected);
-            //printLayer(&output);
 
             // Backpropagation
             backward_pass(&Input, &output, NULL, expected, LEARNING_RATE);
-            backward_pass(&dummy, &Input, &output, NULL, LEARNING_RATE);
-
-            //printLayer(&output);
-
-            for(int dense_batch = 0; dense_batch < BATCH_SIZE; dense_batch++){
-                unflatten_dense_to_pool(&Input, &pool0, dense_batch);
-                //printLayer(&Input);
-                //printLayer_pool(&pool0);
-                backward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[dense_batch], NULL, &conv0, &pool0, LEARNING_RATE / BATCH_SIZE);
-            }
-
-            //printLayer_conv(&conv0);
-            
 
 
             // Updates progress bar
