@@ -131,7 +131,7 @@ int main(void)
     Layer_Dense dummy, Input, output;
 
     if (initLayer_conv_input(&input_conv, BATCH_SIZE, 1, 28, 28) < 0||
-        initLayer_conv(&conv0, 28, 28, 2, 3, 3, 1, Leaky_ReLU) < 0 ||
+        initLayer_conv(&conv0, 28, 28, 8, 3, 3, 1, Leaky_ReLU) < 0 ||
         initLayer_pool(&pool0, conv0.outputs_dim[0], conv0.outputs_dim[1], conv0.outputs_dim[2], 2, 2, 2, Avg_Pooling) < 0||
         initLayer(&dummy, 0, 0, 1, ReLU) < 0 ||
         initLayer(&Input, 0, pool0.outputs_dim[0] * pool0.outputs_dim[1] * pool0.outputs_dim[2], BATCH_SIZE, ReLU) < 0 ||
@@ -190,7 +190,7 @@ TRAIN:
 
     // Train the model
     printf("Training the model...\n");
-    int epochs = 60; // Number of epochs for training 
+    int epochs = 30; // Number of epochs for training 
     for (int epoch = 1; epoch <= epochs; epoch++)
     {
         correct = 0;
@@ -278,7 +278,7 @@ TRAIN:
                 unflatten_dense_to_pool(&Input, &pool0, dense_batch);
                 //printLayer(&Input);
                 //printLayer_pool(&pool0);
-                backward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[dense_batch], NULL, &conv0, &pool0, LEARNING_RATE / BATCH_SIZE);
+                backward_pass_conv(&input_conv.inputs_dim[1], input_conv.inputs[dense_batch], NULL, &conv0, &pool0, 0.0000009/*LEARNING_RATE / BATCH_SIZE*/);
             }
 
             //printLayer_conv(&conv0);

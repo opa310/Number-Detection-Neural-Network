@@ -172,7 +172,7 @@ int initLayer_conv(Layer_Conv *l, int prev_layer_row, int prev_layer_col,
             }
             for(int col = 0; col < l->kernels_dim[2]; col++){
                 /* Generates a random number between -1 and 1 */
-                l->kernels[kernel_num][row][col] = (float)rand()/(float)(RAND_MAX) ;//* ((rand()&0x1)? 1:-1);
+                l->kernels[kernel_num][row][col] = (float)(rand() >> 1)/(float)(RAND_MAX);// * ((rand()&0x1)? 1:-1);
             }
         }
     }
